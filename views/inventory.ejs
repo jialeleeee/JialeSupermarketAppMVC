@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <style>
+    /* Modern Inventory styles */
+    :root{ --muted:#6b7280; --card-bg: #ffffff; --glass: rgba(255,255,255,0.06); }
+
+    body { background: linear-gradient(180deg,#f7fbf9 0%, #f3f8f5 100%); }
+
+    /* Hero */
+    .inventory-hero { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:28px; border-radius:14px; background: linear-gradient(90deg, rgba(6,95,70,0.95), rgba(16,185,129,0.9)); color:#fff; box-shadow: 0 12px 40px rgba(6,95,70,0.12); margin-bottom:20px; }
+    .inventory-hero h1 { margin:0; font-size:1.6rem; font-weight:700; }
+    .inventory-hero p { margin:0; color: rgba(255,255,255,0.9); }
+
+    /* Filter area */
+    .filter-bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; background: rgba(255,255,255,0.9); padding:12px; border-radius:12px; box-shadow: 0 6px 18px rgba(16,24,40,0.06); }
+    .filter-bar .form-control { min-width:220px; border-radius:10px; }
+    .filter-bar .form-select { border-radius:10px; }
+    .search-input { position:relative; }
+    .search-input input { padding-left:40px; }
+    .search-input .bi-search { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); }
+
+    /* Bulk restock card modern */
+    .bulk-card { border-radius:12px; padding:14px; background: var(--card-bg); box-shadow: 0 8px 30px rgba(2,6,23,0.04); display:flex; align-items:center; justify-content:space-between; }
+
+    /* Table modern */
+    .table-modern { width:100%; border-collapse:separate; border-spacing:0 12px; }
+    .table-modern thead th { background:transparent; color:var(--muted); font-weight:600; padding:10px 12px; }
+    .table-modern tbody tr { background:var(--card-bg); border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.04); transition:transform .12s ease, box-shadow .12s ease; }
+    .table-modern tbody tr:hover { transform: translateY(-6px); box-shadow:0 18px 40px rgba(2,6,23,0.06); }
+    .table-modern td, .table-modern th { vertical-align:middle; padding:14px 12px; border: none; }
+    .table-modern img.thumb {
+      width:72px;
+      height:72px;
+      border-radius:8px;
+      object-fit:contain;
+      background: #ffffff;
+      padding:6px;
+      box-shadow: 0 4px 12px rgba(2,6,23,0.06);
+      display:block;
+    }
+
+    /* center image cell contents */
+    .image-cell { display:flex; align-items:center; justify-content:center; }
+
+    /* Stock dot and badges */
+    .stock-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:8px; box-shadow:0 2px 6px rgba(2,6,23,0.08); }
+    .stock-dot.out { background:#ef4444; }
+    .stock-dot.low { background:#f97316; }
+    .stock-dot.in { background:#10b981; }
+
+    /* Buttons */
+    .btn-chip { border-radius:10px; padding:6px 10px; font-size:0.9rem; }
+    .btn-action { border-radius:10px; padding:8px 12px; font-weight:600; }
+
+    /* Pagination */
+    .pagination-placeholder { display:flex; justify-content:flex-end; margin-top:18px; }
+
+    /* small animations */
+    .btn { transition:transform .12s ease, box-shadow .12s ease; }
+    .btn:active { transform:translateY(1px); }
+  </style>
+
+  <title>Supermarket App</title>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <%- include('partials/adminnavbar') %>
+  <!-- MAIN CONTENT -->
+  <div class="container mt-4">
+
+    <div class="inventory-hero">
+      <div>
+        <h1>Inventory</h1>
+        <p>Manage products, quickly restock and keep an eye on low-stock items.</p>
+      </div>
+      <div class="text-end">
+        <div class="fw-semibold">Welcome, <%= user.username %></div>
+        <div class="small">Admin panel</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="filter-bar">
+        <div class="search-input" style="flex:1;">
+          <i class="bi bi-search"></i>
+          <input type="text" class="form-control" id="searchInput" placeholder="Search products, categories, SKUs...">
+        </div>
+
+        <div>
+          <select class="form-select" id="categorySelect" name="categoryId" onchange="window.location='?categoryId=' + this.value">
+            <option value="">All categories</option>
+            <% if (categories) { %>
+              <% categories.forEach(c => { %>
+                <option value="<%= c.id %>" <%= (selectedCategoryId == c.id) ? 'selected' : '' %>><%= c.name %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+
+        <div>
+          <select class="form-select" id="sortSelect">
+            <option value="">Sort: Default</option>
+            <option value="name-asc">Name A → Z</option>
+            <option value="qty-asc">Qty Low → High</option>
+            <option value="qty-desc">Qty High → Low</option>
+            <option value="category-asc">Category A → Z</option>
+          </select>
+        </div>
+
+        <div>
+          <a href="/inventory" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- (filter bar above replaces the old scattered search/filter controls) -->
+
+    <!-- ⭐ BULK RESTOCK CONTROLS grouped in a card -->
+    <div class="bulk-card mb-3">
+      <div class="d-flex align-items-center">
+        <div class="form-check me-3">
+          <input type="checkbox" id="selectAll" class="form-check-input">
+          <label for="selectAll" class="form-check-label ms-1">Select all</label>
+        </div>
+
+        <div class="d-flex align-items-center">
+          <i class="bi bi-box-seam me-2" title="Qty"></i>
+          <input type="number" id="restockAmount" min="1" class="form-control form-control-sm me-2" style="width:120px;" placeholder="Qty">
+          <button class="btn btn-action btn-primary" id="bulkRestockBtn"><i class="bi bi-arrow-repeat me-1"></i> Bulk Restock</button>
+        </div>
+      </div>
+
+      <div>
+        <small class="text-muted">Bulk actions affect selected rows. Use filters to narrow selection.</small>
+      </div>
+    </div>
+
+    <!-- PRODUCT TABLE -->
+    <div class="table-responsive">
+    <table class="table-modern table-borderless align-middle small text-center">
+      <thead>
+        <tr>
+          <th style="width:60px;">Select / Restock</th>
+          <th style="width:160px;">Product Name</th>
+          <th style="width:140px;">Category</th>
+          <th style="width:100px;">Image</th>
+          <th style="width:90px;">Qty</th>
+          <th style="width:90px;">Price</th>
+          <th style="width:140px;">Manage</th>
+        </tr>
+      </thead>
+
+      <tbody id="productTableBody">
+        <% products.forEach(p => { %>
+          <% 
+            let stockStatus = 'in';
+            let stockLabel = 'In Stock';
+            if (p.quantity === 0) { stockStatus = 'out'; stockLabel = 'Out of Stock'; }
+            else if (p.quantity <= 20) { stockStatus = 'low'; stockLabel = 'Low Stock'; }
+          %>
+
+          <tr id="row-<%= p.id %>" data-name="<%= (p.productName||'').toLowerCase() %>" data-qty="<%= p.quantity %>" data-category="<%= (p.categoryName||'').toLowerCase() %>">
+
+            <td class="select-cell">
+              <div class="form-check">
+                <input class="form-check-input select-product" type="checkbox" value="<%= p.id %>">
+              </div>
+            </td>
+
+            <!-- Product Name (with stock dot) -->
+            <td class="product-name-cell text-start">
+              <div class="d-flex align-items-center">
+                <span class="stock-dot <%= stockStatus %>"></span>
+                <a href="/product/<%= p.id %>" class="text-dark fw-semibold product-name ms-2"><%= p.productName %></a>
+              </div>
+            </td>
+
+            <!-- Category -->
+            <td class="category-cell text-muted"><%= p.categoryName || 'Uncategorised' %></td>
+
+            <!-- Image -->
+            <td class="image-cell">
+              <img src="/images/<%= p.image %>" class="thumb" alt="<%= p.productName %>">
+            </td>
+
+            <!-- Quantity -->
+            <td class="qty" id="qty-<%= p.id %>"><i class="bi bi-box-seam me-1"></i> <%= p.quantity %></td>
+
+            <!-- Price -->
+            <td class="price">$<%= (p.price != null ? Number(p.price).toFixed(2) : '0.00') %></td>
+
+            <!-- Manage actions -->
+            <td>
+              <a href="/updateProduct/<%= p.id %>" class="btn btn-primary btn-sm btn-chip me-2"><i class="bi bi-pencil"></i> Edit</a>
+              <form action="/deleteProduct/<%= p.id %>" method="GET" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                <button class="btn btn-outline-danger btn-sm btn-chip"><i class="bi bi-trash"></i> Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <div class="pagination-placeholder">
+      <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm">
+          <li class="page-item disabled"><a class="page-link" href="#">«</a></li>
+          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item"><a class="page-link" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" href="#">3</a></li>
+          <li class="page-item"><a class="page-link" href="#">»</a></li>
+        </ul>
+      </nav>
+    </div>
+
+  </div>
+
+<script>
+// initialize tooltips (if any)
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+/* -------------------------
+   DYNAMIC SEARCH, SORT, SELECT ALL
+-------------------------- */
+const searchInput = document.getElementById("searchInput");
+const tableBody = document.getElementById("productTableBody");
+const sortSelect = document.getElementById('sortSelect');
+
+function getRows() {
+  return [...tableBody.querySelectorAll('tr')];
+}
+
+function applySearch() {
+  const text = searchInput.value.trim().toLowerCase();
+  getRows().forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = name.includes(text) ? '' : 'none';
+  });
+}
+
+searchInput.addEventListener('input', applySearch);
+
+// Sort rows client-side
+function sortRows(mode) {
+  const rows = getRows();
+  let sorted = rows.slice();
+
+  if (!mode) return; // no-op
+
+  sorted.sort((a, b) => {
+    if (mode === 'name-asc') return a.dataset.name.localeCompare(b.dataset.name);
+    if (mode === 'qty-asc') return (Number(a.dataset.qty) || 0) - (Number(b.dataset.qty) || 0);
+    if (mode === 'qty-desc') return (Number(b.dataset.qty) || 0) - (Number(a.dataset.qty) || 0);
+    if (mode === 'category-asc') return (a.dataset.category || '').localeCompare(b.dataset.category || '');
+    return 0;
+  });
+
+  // Re-append in sorted order
+  sorted.forEach(r => tableBody.appendChild(r));
+}
+
+sortSelect.addEventListener('change', (e) => {
+  sortRows(e.target.value);
+});
+
+/* -------------------------
+   SELECT ALL
+-------------------------- */
+const selectAll = document.getElementById("selectAll");
+selectAll.addEventListener("change", () => {
+  const productCheckboxes = document.querySelectorAll(".select-product");
+  productCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+});
+
+/* -------------------------
+   ⭐ BULK RESTOCK (AJAX)
+-------------------------- */
+document.getElementById("bulkRestockBtn").addEventListener("click", async () => {
+  const amount = parseInt(document.getElementById("restockAmount").value);
+  const selected = [...document.querySelectorAll(".select-product:checked")].map(cb => cb.value);
+
+  if (selected.length === 0) return alert("No products selected.");
+  if (!amount || amount < 1) return alert("Enter a valid quantity.");
+
+  const res = await fetch("/inventory/bulk-restock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids: selected, amount })
+  });
+
+  const data = await res.json();
+  if (!data.success) return alert("Error: " + data.message);
+
+  // LIVE UPDATE quantities (preserve icon)
+  selected.forEach(id => {
+    const qtyCell = document.getElementById("qty-" + id);
+    if (!qtyCell) return;
+    // Keep possible icon text and update numeric part
+    const current = parseInt(qtyCell.innerText.replace(/[^0-9]/g, '')) || 0;
+    const newQty = current + amount;
+    qtyCell.innerHTML = '<i class="bi bi-box-seam me-1"></i> ' + newQty;
+    // Update stock dot color if necessary
+    const tr = document.getElementById('row-' + id);
+    if (tr) {
+      const dot = tr.querySelector('.stock-dot');
+      if (dot) {
+        if (newQty === 0) { dot.className = 'stock-dot out'; }
+        else if (newQty <= 20) { dot.className = 'stock-dot low'; }
+        else { dot.className = 'stock-dot in'; }
+      }
+    }
+  });
+
+  alert("Restock successful!");
+});
+</script>
+
+</body>
+</html>

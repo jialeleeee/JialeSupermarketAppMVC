@@ -1,0 +1,102 @@
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+  <div class="container">
+
+    <% if (user && user.role === 'admin') { %>
+      <style>
+        /* Slimmer, interactive admin navbar */
+        :root { --admin-base-size: 15px; --glass-bg: rgba(255,255,255,0.04); --accent: #16a34a; --hover-accent: rgba(22,163,74,0.12); }
+        html { font-size: var(--admin-base-size); }
+        body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+
+        /* Reduced padding and height for a slimmer look */
+        nav.navbar { padding: 0.45rem 1rem; min-height: 56px; backdrop-filter: blur(6px); background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .navbar-brand { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.2px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+
+        /* Nav items as compact pills with color-change on hover */
+        .navbar .nav-link { padding: 0.38rem 0.7rem; margin-left: 6px; margin-right: 6px; border-radius: 10px; color: rgba(255,255,255,0.95); transition: transform .12s ease, box-shadow .12s ease, background-color .18s ease, color .12s ease; font-weight: 600; }
+        .navbar .nav-link:hover { transform: translateY(-2px); background: var(--hover-accent); color: #065f46; box-shadow: 0 6px 16px rgba(0,0,0,0.10); }
+        .navbar .nav-link:focus { outline: none; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+        .navbar .nav-link:active, .navbar .nav-link.is-pressed { transform: translateY(0); box-shadow: inset 0 2px 6px rgba(0,0,0,0.12); }
+
+        /* Profile pill smaller and interactive */
+        .navbar .nav-link.profile-pill { background: rgba(255,255,255,0.03); padding-left: .45rem; padding-right: .45rem; border-radius: 14px; }
+        .navbar .nav-link.profile-pill:hover { background: var(--hover-accent); color: #065f46; }
+
+        /* Logout emphasized but consistent */
+        .navbar .nav-link.logout { background: rgba(255,255,255,0.03); color: #fff; }
+        .navbar .nav-link.logout:hover { background: rgba(255,255,255,0.10); color: #fff; }
+
+        /* small responsive tweaks */
+        @media (max-width: 768px) {
+          nav.navbar { padding: .4rem 0.6rem; }
+          .navbar-brand { font-size: 1.05rem; }
+          .navbar .nav-link { padding: 0.35rem 0.5rem; }
+        }
+      </style>
+    <% } %>
+
+    <a class="navbar-brand" href="/">Supermarket App</a>
+
+    <% if (typeof hideNavLinks === 'undefined' || !hideNavLinks) { %>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav ms-auto">
+
+          <% if (user && user.role === 'admin') { %>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin">Dashboard</a>
+            </li>
+          <% } %>
+
+          <li class="nav-item">
+            <a class="nav-link" href="/inventory">Inventory</a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="/addProduct">Add Product</a>
+          </li>
+
+          <!-- Orders link removed per admin preference -->
+
+          <li class="nav-item">
+            <a class="nav-link logout" href="/logout">Logout</a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link profile-pill d-flex align-items-center" href="/user/profile">
+              <i class="bi bi-person-circle" style="font-size:1.1rem; margin-right:8px;"></i>
+              <span><%= user && user.username ? user.username : 'Profile' %></span>
+            </a>
+          </li>
+
+        </ul>
+      </div>
+    <% } else { %>
+      <!-- Minimal navbar for dashboard only: show brand and Logout only -->
+      <div class="ms-auto">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link text-light" href="/logout">Logout</a>
+          </li>
+        </ul>
+      </div>
+    <% } %>
+
+  </div>
+</nav>
+<script>
+  // Add small press feedback for navbar links (mousedown / touch)
+  (function(){
+    const links = document.querySelectorAll('nav.navbar .nav-link');
+    links.forEach(l => {
+      l.addEventListener('mousedown', ()=> l.classList.add('is-pressed'));
+      l.addEventListener('mouseup', ()=> l.classList.remove('is-pressed'));
+      l.addEventListener('mouseleave', ()=> l.classList.remove('is-pressed'));
+      l.addEventListener('touchstart', ()=> l.classList.add('is-pressed'));
+      l.addEventListener('touchend', ()=> l.classList.remove('is-pressed'));
+    });
+  })();
+</script>

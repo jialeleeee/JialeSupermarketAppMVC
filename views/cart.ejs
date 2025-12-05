@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shopping Cart</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+  <style>
+    .select-btn {
+      padding: 8px 18px;
+      font-size: 15px;
+    }
+
+    .unselect-btn {
+      padding: 6px 14px;
+      font-size: 15px;
+    }
+
+    /* Bigger checkboxes */
+    .big-checkbox {
+      width: 14px;
+      height: 14px;
+      transform: scale(1.7);
+      cursor: pointer;
+    }
+
+    /* Move divider closer */
+    th:first-child,
+    td:first-child {
+      width: 70px !important;
+      text-align: center;
+    }
+  </style>
+
+</head>
+
+<body class="bg-light">
+
+  <%- include('partials/usernavbar') %>
+
+  <div class="container">
+    <h2 class="mb-4">🛒 Shopping Cart</h2>
+
+    <% if (cartItems.length === 0) { %>
+      <div class="alert alert-info">Your cart is empty.</div>
+      <a href="/shopping" class="btn btn-secondary">Back to Shopping</a>
+    <% } else { %>
+
+      <!-- SELECT ALL / UNSELECT ALL -->
+      <div class="d-flex align-items-center mb-3">
+        <label class="me-3 fs-5">
+          <input type="checkbox" id="select-all" class="big-checkbox">
+          <strong>Select All</strong>
+        </label>
+
+        <button type="button" id="unselect-all" class="btn btn-outline-secondary unselect-btn">
+          Unselect All
+        </button>
+      </div>
+
+      <!-- CART TABLE -->
+      <table class="table table-bordered bg-white align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Select</th>
+            <th>Product</th>
+            <th>Image</th>
+            <th>Price</th>
+            <th style="width:180px;">Quantity</th>
+            <th>Total</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody id="cart-body">
+          <% cartItems.forEach(item => { %>
+            <tr data-id="<%= item.id %>" data-price="<%= item.price %>">
+
+              <td class="text-center">
+                <input type="checkbox" class="item-select big-checkbox" value="<%= item.id %>">
+              </td>
+
+              <td><%= item.productName %></td>
+
+              <td><img src="/images/<%= item.image || 'bgproduct.png' %>" width="60" class="rounded"></td>
+
+              <td>$<%= item.price.toFixed(2) %></td>
+
+              <td>
+                <div class="input-group">
+
+                  <form method="POST" action="/cart/update/<%= item.id %>">
+                    <input type="hidden" name="delta" value="-1">
+                    <button class="btn btn-outline-secondary btn-sm"
+                      <% if (item.quantity <= 1) { %> disabled <% } %>>
+                      −
+                    </button>
+                  </form>
+
+                  <input type="text" value="<%= item.quantity %>" readonly
+                         class="form-control text-center" style="width:60px;">
+
+                  <form method="POST" action="/cart/update/<%= item.id %>">
+                    <input type="hidden" name="delta" value="1">
+                    <button class="btn btn-outline-secondary btn-sm"
+                      <% if (item.quantity >= item.stock) { %> disabled <% } %>>
+                      +
+                    </button>
+                  </form>
+
+                </div>
+                <small class="text-muted">Stock: <%= item.stock %></small>
+              </td>
+
+              <td class="item-total">$<%= (item.price * item.quantity).toFixed(2) %></td>
+
+              <td>
+                <form method="POST" action="/cart/delete/<%= item.id %>">
+                  <button class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </td>
+
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <!-- TOTALS & CHECKOUT -->
+      <div class="row mt-3">
+
+        <div class="col-md-6">
+          <h4 class="fw-bold">
+            Cart Total: $<span id="cart-total"><%= total.toFixed(2) %></span>
+          </h4>
+          <a href="/shopping" class="btn btn-secondary mt-3">Back to Shopping</a>
+        </div>
+
+        <div class="col-md-6 text-end">
+          <h4 class="fw-bold">
+            Selected Total: $<span id="selected-total">0.00</span>
+          </h4>
+
+          <form method="GET" action="/payment" class="d-inline">
+            <input type="hidden" name="selectedItems" id="selected-items-input">
+            <button type="button" id="checkout-btn" class="btn btn-success mt-3 select-btn">
+              Checkout Selected Items
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    <% } %>
+  </div>
+
+<script>
+
+  const selectAll = document.getElementById("select-all");
+  const unselectAll = document.getElementById("unselect-all");
+  const checkboxes = document.querySelectorAll(".item-select");
+  const selectedTotalSpan = document.getElementById("selected-total");
+  const checkoutBtn = document.getElementById("checkout-btn");
+  const selectedItemsInput = document.getElementById("selected-items-input");
+
+  /* -------- RESTORE SELECTED ITEMS -------- */
+  const savedSelections = JSON.parse(localStorage.getItem("selectedCartItems") || "[]");
+
+  checkboxes.forEach(cb => {
+    if (savedSelections.includes(cb.value)) cb.checked = true;
+  });
+
+  updateSelectedTotal();
+
+  /* -------- UPDATE TOTAL + SAVE STATE -------- */
+  function updateSelectedTotal() {
+    let total = 0;
+
+    document.querySelectorAll("tr[data-id]").forEach(row => {
+      const checkbox = row.querySelector(".item-select");
+      if (checkbox.checked) {
+        const itemTotal = parseFloat(row.querySelector(".item-total").innerText.replace("$", ""));
+        total += itemTotal;
+      }
+    });
+
+    selectedTotalSpan.innerText = total.toFixed(2);
+
+    // Save to localStorage
+    const selected = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    localStorage.setItem("selectedCartItems", JSON.stringify(selected));
+
+    // Update Select All state
+    selectAll.checked = (selected.length === checkboxes.length);
+  }
+
+  /* SELECT ALL */
+  selectAll.addEventListener("change", () => {
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateSelectedTotal();
+  });
+
+  /* UNSELECT ALL */
+  unselectAll.addEventListener("click", () => {
+    selectAll.checked = false;
+    checkboxes.forEach(cb => cb.checked = false);
+    updateSelectedTotal();
+  });
+
+  /* INDIVIDUAL CHECKBOX CHANGE */
+  checkboxes.forEach(cb => cb.addEventListener("change", updateSelectedTotal));
+
+  /* -------- CHECKOUT: SEND ONLY SELECTED IDS -------- */
+  checkoutBtn.addEventListener("click", () => {
+    const selectedIds = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+      alert("Please select at least one item to checkout.");
+      return;
+    }
+
+    selectedItemsInput.value = JSON.stringify(selectedIds);
+    checkoutBtn.closest("form").submit();
+  });
+
+</script>
+
+</body>
+</html>

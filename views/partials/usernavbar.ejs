@@ -1,0 +1,54 @@
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+  <div class="container-fluid">
+
+    <a class="navbar-brand" href="/">Supermarket App</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="userNav">
+      <ul class="navbar-nav ms-auto">
+
+        <li class="nav-item">
+          <a class="nav-link" href="/shopping">Shop</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="/orders">Order History</a>
+        </li>
+
+        <li class="nav-item position-relative">
+          <a class="nav-link" href="/cart" role="button">
+            View Cart
+            <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+              <span class="badge bg-danger rounded-pill position-absolute"
+                    style="top: 0px; right: -10px; padding:3px 6px; font-size:0.65rem;">
+                <%= cartCount %>
+              </span>
+            <% } %>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="/logout">Logout</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link d-flex align-items-center" href="/user/profile">
+            <i class="bi bi-person-circle" style="font-size:1.2rem; margin-right:6px;"></i>
+            <% if (user && user.username) { %>
+              <span><%= user.username %></span>
+            <% } else { %>
+              <span>Profile</span>
+            <% } %>
+          </a>
+        </li>
+
+      </ul>
+    </div>
+
+  </div>
+</nav>
+<!-- Profile page moved to /user/profile -->
+

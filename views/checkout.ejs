@@ -1,0 +1,11 @@
+<h2>Checkout Summary</h2>
+
+<ul>
+  <% items.forEach(i => { %>
+    <li><%= i.quantity %> × <%= i.productName %> — $<%= (i.quantity * i.price).toFixed(2) %></li>
+  <% }) %>
+</ul>
+
+<h3>Total: $<%= total.toFixed(2) %></h3>
+
+<a href="/cart" class="btn btn-secondary">Back to Cart</a>
